@@ -1,5 +1,6 @@
 use std::{
     borrow::Cow,
+    cmp::Ordering,
     io::{BufRead, BufReader, Read},
     str::{from_utf8, FromStr},
 };
@@ -12,7 +13,7 @@ use crate::{
 
 use bitflags::bitflags;
 
-const MAGIC_NUMBER: &'static [u8] = b"flf2a";
+const MAGIC_NUMBER: &[u8] = b"flf2a";
 
 bitflags! {
     /// The FIGfont's layout informations.
@@ -75,7 +76,7 @@ impl Header {
     }
 
     /// Get the hard blank character.
-    pub fn hard_blank_char<'a>(&'a self) -> &'a [u8] {
+    pub fn hard_blank_char(&self) -> &[u8] {
         &self.hard_blank_char[..]
     }
 
@@ -100,7 +101,7 @@ impl Header {
     }
 
     /// Get the font's comment.
-    pub fn comment<'a>(&'a self) -> Cow<'a, str> {
+    pub fn comment(&self) -> Cow<str> {
         Cow::Borrowed(&self.comment)
     }
 
@@ -239,12 +240,10 @@ fn parse_header<R: Read>(bread: &mut BufReader<R>) -> Result<Header> {
 }
 
 fn full_layout_from_old_layout(old_layout: i32) -> Layout {
-    let raw = if old_layout == 0 {
-        64
-    } else if old_layout < 0 {
-        0
-    } else {
-        (old_layout as u32 & 31) | 128
+    let raw = match old_layout.cmp(&0) {
+        Ordering::Equal => 64,
+        Ordering::Less => 0,
+        Ordering::Greater => (old_layout as u32 & 31) | 128,
     };
 
     Layout::from_bits_truncate(raw)
